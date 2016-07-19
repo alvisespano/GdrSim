@@ -3,26 +3,11 @@
 module GdrSim.Character
 
 open GdrSim.Globals
+open GdrSim.Weapon
 
 type move = Shoot
 
-type [< AbstractClass >] weapon () =
-    abstract hit_mod : float
-    abstract dmg : float
 
-type [< AbstractClass >] ranged_weapon () =
-    inherit weapon ()
-
-type [< AbstractClass >] melee_weapon () =
-    inherit weapon ()
-
-type [< AbstractClass >] unarmed () =
-    inherit melee_weapon ()
-
-type gun () =
-    inherit ranged_weapon ()
-    override val hit_mod = 0.
-    override val dmg = 10.
 
 type build = (string * int) list
 
@@ -47,7 +32,7 @@ with
         let dmg = w.dmg + this.dmg_mod
         in
             match roll_d100 hit with
-            | roll.Crit     -> 
+            | roll.Crit     -> this.aimed_attack npc w
             | roll.Success  -> dmg
             | roll.Fail     -> 0.
         

@@ -67,7 +67,7 @@ let abilities : ability list =
         { name = "colpo mirato da fermo"
           req  = req 3 "mira"
           rules = rules_cost1 7 Active (fun i n pc ->
-                            { pc = { pc with dmg_mod = 5 * (float i) }
+                            { pc = { pc with dmg_mod = 5 * float i }
                               ca = proj (1, n) (1, 5) i })
         }
 
