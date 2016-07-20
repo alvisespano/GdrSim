@@ -2,9 +2,14 @@
 
 module GdrSim.Globals
 
+open FSharp.Common
+
+let L = new Log.console_logger ()
+
 // some units of measure
 
 type [< Measure >] ca           // combat action
+//type [< Measure >] skill        // skill points
 type [< Measure >] round        // round
 type [< Measure >] hp           // both damage and health is measured in hp
 
