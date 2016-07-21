@@ -7,13 +7,13 @@ open GdrSim.Character
 open Globals
 
 
-type rule_out = {
+type active_out = {
     ca : int<ca>
-    after : int -> int -> pc -> unit
+//    after : int -> int -> pc -> unit
 }
 
 type rule =
-    | Active of int * (int -> int -> pc -> rule_out)
+    | Active of int * (int -> int -> pc -> active_out)
     | Passive of int * (int -> int -> pc -> unit)
 
 type req = (int * string) option
@@ -40,11 +40,6 @@ let proj (a, b) (a' : int<'u>, b') i =
 let active n on_use = Active (n, on_use)
 let passive n setter = Passive (n, setter)
 
-//let active_stepped (a : float, b : float) (step : float) on_use =
-//    let len = int ((b - a) / step) + 1
-//    in
-//        active len (fun i n pc -> on_use (a + step * float i) pc)
-
 let passive_stepped (a : float, b : float) (step : float) setter =
     let len = int ((b - a) / step) + 1
     in
@@ -55,6 +50,8 @@ let passive_stepped (a : float, b : float) (step : float) setter =
 // abilities
 //
 
+//let UntilAttack = Until (fun () -> true)
+
 let Abilities : ability list =
     [
         { name = "mira"
@@ -62,14 +59,12 @@ let Abilities : ability list =
           rule = passive_stepped (0.10, 0.50) 0.10 (fun x pc -> pc.base_hit <- x)
         }
 
-        { name = "colpo mirato da fermo"
+        { name = "mira da fermo"
           req  = req 3 "mira"
           rule = active 7 
                         (fun i n pc ->
-                            let dmg_mult = pc.dmg_mult
-                            pc.dmg_mult <- 1.0 + float i * 0.50
-                            { ca = proj (1, n) (1<ca>, 5<ca>) i
-                              after = fun i n pc -> pc.dmg_mult <- dmg_mult }
+                            pc.add_buff (buff ((fun pc -> pc.dmg_mult <- 1.0 + float i * 0.50), Ca 1<ca>))
+                            { ca = proj (1, n) (1<ca>, 4<ca>) i }
                         )
         }
 
