@@ -10,11 +10,11 @@ open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 type build = Env.t<string, int>
    
-type [< AbstractClass >] target (max_health, position) =
-    member val max_health : int<hp> = max_health with get, set
-    member val health = max_health with get, set
+type [< AbstractClass >] target (max_health_, position_) =
+    member val max_health : int<hp> = max_health_ with get, set
+    member val health = max_health_ with get, set
     member this.is_alive = this.health > 0<hp>
-    member val position : int<m> = position with get, set
+    member val position : int<m> = position_ with get, set
 
 type weapon with
     member this.can_reach (t1 : target) (t2 : target) = let d = abs (t2.position - t1.position) in d <= this.max_range && d >= this.min_range
@@ -23,31 +23,38 @@ type weapon with
 type dummy (?max_health) =
     inherit target (defaultArg max_health 1000<hp>, 15<m>)
 
+
+type arm (base_hit_) =
+    abstract base_hit : float with get, set
+    default val base_hit = base_hit_ with get, set
+    member val aimed_hit_malus = -0.40 with get, set
+    member this.hit = this.base_hit + this.weapon.hit_mod
+    member this.aimed_hit = this.hit + this.aimed_hit_malus
+    member val weapon : weapon = upcast unarmed () with get, set
+    interface ICloneable with
+        member this.Clone () = this.MemberwiseClone ()
+
+type larm (base_hit_) =
+    inherit arm (base_hit_)
+    member val hit_malus = -0.20 with get, set
+    override this.base_hit with get () = base.base_hit + this.hit_malus // setter is not overridden
+
+
 type pc (stats_, build_) =
     inherit target (stats_.con * 10<hp>, 0<m>)
 
     member val stats : stats = stats_ with get, set
     member val build : build = build_ with get, set
-
     member val target : target = upcast dummy () with get, set
-
-    member val right_weapon : weapon = upcast unarmed () with get, set
-    member val left_weapon : weapon = upcast unarmed () with get, set
-
     member val ca_per_round = 3<ca> with get, set
-    member val base_hit = 0.50 with get, set
-    member val left_hit_malus = -0.20 with get, set
-    member this.base_right_hit = this.base_hit
-    member this.base_left_hit = this.base_hit + this.left_hit_malus
-    member val aimed_hit_malus = -0.40 with get, set
     member val dmg_mult = 1.0 with get, set
 
-    member this.hit base_hit (w : weapon) = base_hit + w.hit_mod
-    member this.aimed_hit base_hit (w : weapon) = this.hit base_hit w + this.aimed_hit_malus
-
-//    member this.right_hit = this.base_right_hit + this.aimed_hit_malus + this.right_weapon.hit_mod
-//    member this.left_hit = this.base_left_hit + this.aimed_hit_malus + this.left_weapon.hit_mod
+    member val R = new arm (0.50) with get, set
+    member val L = new larm (0.50) with get, set
             
+    member this.base_hit with set x = this.R.base_hit <- x; this.L.base_hit <- x
+    member this.aimed_hit_malus with set x = this.R.aimed_hit_malus <- x; this.L.aimed_hit_malus <- x
+
     member val active_buffs : buff list = [] with get, set
     member this.add_buff (buff : buff) = this.active_buffs <- buff :: this.active_buffs
     member this.filter_buffs f = this.active_buffs <- List.filter f this.active_buffs
@@ -55,6 +62,8 @@ type pc (stats_, build_) =
     interface ICloneable with
         member this.Clone () =
             let r = this.MemberwiseClone () :?> pc
+            r.L <- (this.L :> ICloneable).Clone () :?> larm
+            r.R <- (this.R :> ICloneable).Clone () :?> arm
             // no need to copy pure members (such as stats or active_buffs list etc) because any modification would create new objects anyway
             r :> obj
 
@@ -65,22 +74,14 @@ type pc (stats_, build_) =
         r
 
     override this.ToString () =
-        let p bas w =
-            let h bas w = this.hit bas w * 100. |> int
+        let p (a : arm) =
+            let h bas w = pretty_percent a.hit
             in
-                sprintf "hit:%d%% %s" (h bas w) (w.pretty_with_dmg this.stats)
+                sprintf "hit:%s %s" (h a.base_hit a.weapon) (a.weapon.pretty_with_dmg this.stats)
         in
-            sprintf "%s\n[R] %s\n[L] %s"
-                (this.stats.pretty (sprintf "%d") "\n")
-                (p this.base_right_hit this.right_weapon) 
-                (p this.base_left_hit this.left_weapon)
+            sprintf "%s\n[R] %s\n[L] %s" (this.stats.pretty (sprintf "%d") "\n") (p this.R) (p this.L)
 
 
 and buff (f, duration_) =
     member this.apply (pc : pc) : unit = f pc        
     member val duration : duration = duration_ with get, set
-
-        
-type action =
-    | Attack
-    | UseAbility of string

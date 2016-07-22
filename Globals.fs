@@ -5,6 +5,8 @@ module GdrSim.Globals
 open FSharp.Common
 open FSharp.Common.Log
 
+// logger
+
 let L =
     let cfg = new Log.config ()
     cfg.show_datetime <- false
@@ -25,7 +27,7 @@ type duration =
     | Round of int<round>
 
 
-// random and rolls
+// randomness and rolls
 //
 
 let Rng = new System.Random ()
@@ -37,11 +39,12 @@ let rand_int (a, b) = rand_float (float a, float b) |> Operators.round |> int
 type roll = Crit | Success | Fail
 
 let roll_d100 (x : float) =
-    assert (x > 0.)
     let y = rand_float (0., 1.)
     if y < x / 10. then roll.Crit
     elif y < x then roll.Success
     else roll.Fail
+
+let pretty_percent x = sprintf "%d%%" (x * 100. |> Operators.round |> int)
 
    
 

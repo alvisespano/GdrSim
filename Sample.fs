@@ -24,7 +24,7 @@ module Pc =
 
     let cia_gun1 =
         let r = pc (avg_str_and_per, Build.empty)
-        r.right_weapon <- cia_gun
+        r.R.weapon <- cia_gun
         r
 
 

@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "GdrSim", "GdrSim.fsproj", "{6EE7E828-B2EC-4D38-AD5E-2F88D211D53E}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Common", "..\FSharp.Common\FSharp.Common.fsproj", "{3E721011-6CCE-4187-A49A-DAC093DE8E0F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,14 @@ Global
 		{6EE7E828-B2EC-4D38-AD5E-2F88D211D53E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{6EE7E828-B2EC-4D38-AD5E-2F88D211D53E}.Release|x64.ActiveCfg = Release|Any CPU
 		{6EE7E828-B2EC-4D38-AD5E-2F88D211D53E}.Release|x64.Build.0 = Release|Any CPU
+		{3E721011-6CCE-4187-A49A-DAC093DE8E0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E721011-6CCE-4187-A49A-DAC093DE8E0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E721011-6CCE-4187-A49A-DAC093DE8E0F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{3E721011-6CCE-4187-A49A-DAC093DE8E0F}.Debug|x64.Build.0 = Debug|Any CPU
+		{3E721011-6CCE-4187-A49A-DAC093DE8E0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E721011-6CCE-4187-A49A-DAC093DE8E0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E721011-6CCE-4187-A49A-DAC093DE8E0F}.Release|x64.ActiveCfg = Release|Any CPU
+		{3E721011-6CCE-4187-A49A-DAC093DE8E0F}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

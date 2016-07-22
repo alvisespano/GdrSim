@@ -7,6 +7,8 @@ open Globals
 open Skill
 open Weapon
 open FSharp.Common.Log
+open FSharp.Data.UnitSystems.SI.UnitSymbols
+
 
 let apply_build (pc : pc) (build : build) = 
     for name, i in build do
@@ -15,27 +17,41 @@ let apply_build (pc : pc) (build : build) =
         | Active _            -> ()     // deal only with passive abilities
         | Passive (n, on_use) -> on_use i n pc
 
-type action with
+
+
+type action =
+    | Attack
+    | UseAbility of string
+    | GoMelee
+    | GoRanged
+with
+    override this.ToString () =
+        match this with
+        | Attack -> "atk"
+        | UseAbility name -> sprintf "use(%s)" name
+        | GoMelee -> "goMelee"
+        | GoRanged -> "goRanged"
+
     member this.perform (pc : pc) =        
         let pc = pc.clone_and_apply_buffs 
         match this with
         | Attack ->
             let target = pc.target
-            let roll_attack base_hit (w : weapon) =
-                if w.can_reach pc target then 
-                    match roll_d100 (pc.hit base_hit w) with
+            let roll_attack (a : arm) =
+                if a.weapon.can_reach pc target then 
+                    match roll_d100 a.hit with
                     | roll.Crit    // TODO: implementare il crit
-                    | roll.Success  -> w.dmg pc.stats
+                    | roll.Success  -> a.weapon.dmg pc.stats
                     | roll.Fail     -> 0<hp>
                 else 0<hp>
-            let rdmg = roll_attack pc.base_right_hit pc.right_weapon
+            let rdmg = roll_attack pc.R
             let ldmg =
-                match pc.right_weapon.hand with
-                | OneHand | MainHand -> roll_attack pc.base_left_hit pc.left_weapon
+                match pc.R.weapon.hand with
+                | OneHand | MainHand -> roll_attack pc.L
                 | TwoHand -> 0<hp>
             let dmg = ldmg + rdmg
             target.health <- target.health - dmg
-            L.msg Normal "[Attack][target hp = %d][Ldmg = %d][Rdmg = %d][dmg = %d]" target.health ldmg rdmg dmg
+            L.msg Normal "[%O][target hp = %d][Ldmg = %d][Rdmg = %d][dmg = %d]" this target.health ldmg rdmg dmg
             1<ca>
 
         | UseAbility name ->
@@ -47,35 +63,56 @@ type action with
                     let i = pc.build.lookup name
                     let out = on_use i n pc
                     out.ca
-            L.msg Normal "[Use(%s)][CA = %d]" name r
+            L.msg Normal "[%O][CA = %d]" this r
             r
 
+        | GoMelee ->
+            pc.position <- pc.target.position
+            L.msg Normal "[%O]" this
+            1<ca>
 
-type single_player (pc) =
-    let mutable current_ca = 0<ca>
-    let mutable current_round = 0<round>
-    
-    member this.perform_actions (actions : action seq) =
-        for a in actions do
-            this.perform_action a
+        | GoRanged ->
+            pc.position <- pc.target.position - 100<m>
+            L.msg Normal "[%O]" this
+            1<ca>
 
-    member this.perform_action (a : action) =
+
+
+type sim = {
+    current_ca : int<ca>
+    current_round : int<round>
+    ca_cnt : int<ca>
+}
+with
+    static member start = { current_ca = 0<ca>; current_round = 0<round>; ca_cnt = 0<ca> }
+
+    member this.perform_action pc (a : action) =
+//        L.debug Low "[perform][%O] %O" a this
         let dca = a.perform pc
-        current_ca <- current_ca + dca
+        let current_ca = this.current_ca + dca
         // update buffs whose duration is in CAs
         pc.filter_buffs (fun (buff : buff) ->
             match buff.duration with
             | Ca n -> if n <= dca then false else buff.duration <- Ca (n - dca); true
             | _ -> true)
-        if current_ca >= pc.ca_per_round then
-            // start new round
-            current_ca <- current_ca % pc.ca_per_round
-            let dround = dca / (pc.ca_per_round / 1<round>) // trick for converting unit of measure to ca/round
-            current_round <- current_round + dround
-            // update buffs whose duration is in rounds
-            pc.filter_buffs (fun (buff : buff) ->
-                match buff.duration with
-                | Round n -> if n <= dround then false else buff.duration <- Round (n - dround); true
-                | _ -> true)
-
+        let current_ca, current_round =
+            if current_ca >= pc.ca_per_round then
+                // start new round
+                let dround = current_ca / (pc.ca_per_round / 1<round>) // trick for converting unit of measure to ca/round
+                let current_round = this.current_round + dround
+                let current_ca = current_ca % pc.ca_per_round
+                // update buffs whose duration is in rounds
+                pc.filter_buffs (fun (buff : buff) ->
+                    match buff.duration with
+                    | Round n -> if n <= dround then false else buff.duration <- Round (n - dround); true
+                    | _ -> true)
+                current_ca, current_round
+            else current_ca, this.current_round
+        in
+            { current_ca = current_ca; current_round = current_round; ca_cnt = this.ca_cnt + 1<ca> }
                 
+    member this.perform_actions pc (actions : action seq) =
+        Seq.fold (fun (this : sim) a -> this.perform_action pc a) this actions
+
+    override this.ToString () =
+        sprintf "CA:%d round:%d totCA:%d" this.current_ca this.current_round this.ca_cnt
