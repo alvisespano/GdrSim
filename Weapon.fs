@@ -16,24 +16,6 @@ with
         | MainHand -> "MH"
         | TwoHand -> "2H"
 
-type 'a stats_bundle = {
-    str : 'a
-    dex : 'a
-    con : 'a
-    per : 'a
-    int : 'a
-}
-with
-    member this.pretty p sep =
-        sprintf "str:%s%sdex:%s%scon:%s%sper:%s%sint:%s%s"
-            (p this.str) sep
-            (p this.dex) sep
-            (p this.con) sep
-            (p this.per) sep
-            (p this.int) sep
-
-type stats = int stats_bundle
-
 type dmg_scale = S | A | B | C | Z
 with
     member this.to_float =
@@ -92,7 +74,7 @@ type [< AbstractClass >] weapon (hand_, min_range_, max_range_, hit_mod_, base_d
     override this.ToString () =
         let name = this.GetType().Name
         in
-            sprintf "[%s] %O %+g%% range:%dm-%dm base:%d + {%s}" name this.hand this.hit_mod this.min_range this.max_range this.base_dmg (pretty_stats_dmg_scale this.stats_dmg_scale) 
+            sprintf "%s %O %+g%% range:%dm-%dm base:%d + {%s}" name this.hand this.hit_mod this.min_range this.max_range this.base_dmg (pretty_stats_dmg_scale this.stats_dmg_scale) 
 
     abstract pretty_with_dmg : stats -> string
     default this.pretty_with_dmg (stats : stats) =

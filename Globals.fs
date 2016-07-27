@@ -4,19 +4,12 @@ module GdrSim.Globals
 
 open FSharp.Common
 open FSharp.Common.Log
+open Config
+
 
 // logger
 
-let L =
-    let cfg = new Log.config ()
-    cfg.show_datetime <- false
-    new Log.console_logger (cfg)
-
-// units of measure
-
-type [< Measure >] ca           // combat action
-type [< Measure >] round        // round
-type [< Measure >] hp           // both damage and health is measured in hp
+let L = new Log.console_logger (logger_cfg)
 
 
 // basic types
@@ -40,7 +33,7 @@ type roll = Crit | Success | Fail
 
 let roll_d100 (x : float) =
     let y = rand_float (0., 1.)
-    if y < x / 10. then roll.Crit
+    if y < x * Config.crit_percent then roll.Crit
     elif y < x then roll.Success
     else roll.Fail
 

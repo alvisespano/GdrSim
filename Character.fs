@@ -10,18 +10,19 @@ open FSharp.Data.UnitSystems.SI.UnitSymbols
 
 type build = Env.t<string, int>
    
-type [< AbstractClass >] target (max_health_, position_) =
+type [< AbstractClass >] npc (max_health_, position_, dodge_) =
     member val max_health : int<hp> = max_health_ with get, set
     member val health = max_health_ with get, set
     member this.is_alive = this.health > 0<hp>
     member val position : int<m> = position_ with get, set
+    member val dodge : float = dodge_ with get, set
 
 type weapon with
-    member this.can_reach (t1 : target) (t2 : target) = let d = abs (t2.position - t1.position) in d <= this.max_range && d >= this.min_range
+    member this.can_reach (t1 : npc) (t2 : npc) = let d = abs (t2.position - t1.position) in d <= this.max_range && d >= this.min_range
 
 
 type dummy (?max_health) =
-    inherit target (defaultArg max_health 1000<hp>, 15<m>)
+    inherit npc (defaultArg max_health 1000<hp>, 15<m>, 0.)
 
 
 type arm (base_hit_) =
@@ -41,11 +42,11 @@ type larm (base_hit_) =
 
 
 type pc (stats_, build_) =
-    inherit target (stats_.con * 10<hp>, 0<m>)
+    inherit npc (Config.max_health_by_con stats_.con, 0<m>, Config.dodge_by_dex stats_.dex)
 
     member val stats : stats = stats_ with get, set
     member val build : build = build_ with get, set
-    member val target : target = upcast dummy () with get, set
+    member val target : npc = upcast dummy () with get, set
     member val ca_per_round = 3<ca> with get, set
     member val dmg_mult = 1.0 with get, set
 
@@ -57,6 +58,7 @@ type pc (stats_, build_) =
 
     member val active_buffs : buff list = [] with get, set
     member this.add_buff (buff : buff) = this.active_buffs <- buff :: this.active_buffs
+    member this.add_buff (d, f) = this.add_buff (new buff (d, f))
     member this.filter_buffs f = this.active_buffs <- List.filter f this.active_buffs
 
     interface ICloneable with
@@ -82,6 +84,6 @@ type pc (stats_, build_) =
             sprintf "%s\n[R] %s\n[L] %s" (this.stats.pretty (sprintf "%d") "\n") (p this.R) (p this.L)
 
 
-and buff (f, duration_) =
-    member this.apply (pc : pc) : unit = f pc        
+and buff (duration_ : duration, f : pc -> unit) =
+    member this.apply pc = f pc        
     member val duration : duration = duration_ with get, set

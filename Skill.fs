@@ -6,10 +6,9 @@ open FSharp.Common
 open GdrSim.Character
 open Globals
 
-
 type active_out = {
-    ca : int<ca>
-//    after : int -> int -> pc -> unit
+    ca : int<ca>                    // number of CAs needed by the the ability 
+    performer : int<ca> -> unit     // performer function taking increasing CA#
 }
 
 type rule =
@@ -31,12 +30,6 @@ let no_req : req = None
 // shortcuts for writing rule algorithmically
 //
 
-let proj (a, b) (a' : int<'u>, b') i =
-    let i = crop (a, b) i
-    let k = float (b' - a') / float (b - a)
-    in
-        k * float (i - a) |> Operators.round |> int |> LanguagePrimitives.Int32WithMeasure<'u>
-
 let active n on_use = Active (n, on_use)
 let passive n setter = Passive (n, setter)
 
@@ -45,12 +38,14 @@ let passive_stepped (a : float, b : float) (step : float) setter =
     in
         passive len (fun i n pc -> setter (a + step * float i) pc)
 
+/// Facility for defining active abilities that needs charging for several CAs, does nothing during charge and perform effect on the last CA
+let charged ca f =
+    { ca = ca
+      performer = fun i -> if i >= ca - 1<ca> then f () }
 
 
 // abilities
 //
-
-//let UntilAttack = Until (fun () -> true)
 
 let Abilities : ability list =
     [
@@ -62,9 +57,10 @@ let Abilities : ability list =
         { name = "mira da fermo"
           req  = req 3 "mira"
           rule = active 7 
-                        (fun i n pc ->
-                            pc.add_buff (buff ((fun pc -> pc.dmg_mult <- 1.0 + float i * 0.50), Ca 1<ca>))
-                            { ca = proj (1, n) (1<ca>, 4<ca>) i }
+                        (fun i n pc ->  // i = i-th skill point spent; n = total skill points spent
+                            charged
+                                (proj_int (1, n) (1<ca>, 4<ca>) i)
+                                (fun () -> pc.add_buff (Ca 1<ca>, fun pc -> pc.dmg_mult <- 1.0 + float i * 0.50))
                         )
         }
 

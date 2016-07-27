@@ -50,6 +50,8 @@
   <ItemGroup>
     <None Include="App.config" />
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Prelude.fs" />
+    <Compile Include="Config.fs" />
     <Compile Include="Globals.fs" />
     <Compile Include="Weapon.fs" />
     <Compile Include="Character.fs" />
