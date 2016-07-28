@@ -45,21 +45,42 @@ with
         let msg cai can fmt = log L.msg cai can fmt
         let warn cai can fmt = log L.warn cai can fmt
         match this with
-        | Attack ->            
-            1<ca>, (fun cai can ->
-                let target = pc.target
-                let arm_attack (a : arm) =
-                    if a.weapon.can_reach pc target then 
-                        match roll_d100 a.hit with
-                        | roll.Crit    // TODO: implementare il crit
-                        | roll.Success  -> a.weapon.dmg pc.stats
-                        | roll.Fail     -> 0<hp>
-                    else 0<hp>
-                let rdmg = arm_attack pc.R
-                let ldmg = if pc.can_dual_wield then arm_attack pc.L else 0<hp>
-                let dmg = ldmg + rdmg
-                target.health <- target.health - dmg
-                msg cai can "[target hp = %d][L-dmg = %d][R-dmg = %d][dmg = %d]" target.health ldmg rdmg dmg)
+        | Attack ->    
+            let target = pc.target
+            let arm_attack (a : arm) =
+                if a.weapon.can_reach pc target then 
+                    match roll_d100 a.hit with
+                    | roll.Crit    // TODO: implementare il crit
+                    | roll.Success  ->
+                        let dmg = a.weapon.dmg pc.stats
+                        let reload =
+                            match a.weapon with
+                            | :? firearm as w ->
+                                match roll_d100 w.reload with
+                                | roll.Crit | roll.Success -> 1<ca>
+                                | roll.Fail -> 0<ca>
+                            | _ -> 0<ca>
+                        in
+                            dmg, reload
+                    | roll.Fail -> 0<hp>, 0<ca>
+                else 0<hp>, 0<ca>
+            let rdmg, rreload = arm_attack pc.R
+            let ldmg, lreload = if pc.can_dual_wield then arm_attack pc.L else 0<hp>, 0<ca>
+            let dmg = rdmg + ldmg
+            let reload = rreload + lreload
+            in
+                1<ca> + rreload + lreload,
+                (fun cai can ->
+                    match cai with
+                    // first CA: shoot
+                    | 0<ca> ->
+                        target.health <- target.health - dmg
+                        if pc.can_dual_wield then msg cai can "[target hp = %d][L-dmg = %d][R-dmg = %d][dmg = %d]" target.health ldmg rdmg dmg
+                        else msg cai can "[target hp = %d][dmg = %d]" target.health dmg
+                    // second CA: reload
+                    | _ -> 
+                        msg cai can "[R-reload = %d][L-reload = %d][reload = %d]" rreload lreload reload
+                )
 
         | EquipR w ->
             pc.equip_weapon_time, (fun cai can ->

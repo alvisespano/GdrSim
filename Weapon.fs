@@ -87,12 +87,12 @@ type [< AbstractClass >] ranged_weapon (name, hand, hit_mod, base_dmg, stats_dmg
 type [< AbstractClass >] melee_weapon (name, hand, hit_mod, base_dmg, stats_dmg_scale) =
     inherit weapon (name, hand, Config.Weapon.Melee.default_min_range, Config.Weapon.Melee.default_max_range, hit_mod, base_dmg, stats_dmg_scale)
 
-type [< AbstractClass >] firearm (name, hand, hit_mod, base_dmg, stats_dmg_scale, fire_rate_ : float) =
+type [< AbstractClass >] firearm (name, hand, hit_mod, base_dmg, stats_dmg_scale, reload_ : float) =
     inherit ranged_weapon (name, hand, hit_mod, base_dmg, stats_dmg_scale)
-    new (name, hand, hit_mod, base_dmg, stats_dmg_scale, reload_every, reload_time) = new firearm (name, hand, hit_mod, base_dmg, stats_dmg_scale, float reload_every / (float reload_every + float reload_time))
-    member this.fire_rate = fire_rate_
-    member this.avg_dpca stats = (this.dmg stats |> float |> LanguagePrimitives.FloatWithMeasure<hp>) * this.fire_rate
-    override this.ToString () = sprintf "%s rate:%s" (base.ToString ()) (pretty_percent this.fire_rate)
+    new (name, hand, hit_mod, base_dmg, stats_dmg_scale, reload_every, reload_time) = new firearm (name, hand, hit_mod, base_dmg, stats_dmg_scale, 1. - float reload_every / (float reload_every + float reload_time))
+    member this.reload = reload_
+    member this.avg_dpca stats = (this.dmg stats |> float |> LanguagePrimitives.FloatWithMeasure<hp>) * this.reload
+    override this.ToString () = sprintf "%s reload:%s" (base.ToString ()) (pretty_percent this.reload)
         
 
 
@@ -115,10 +115,10 @@ type pump_shotgun (name, base_dmg, ?stats_dmg_scale) =
     inherit firearm (name, MainHand, -0.30, base_dmg, defaultArg stats_dmg_scale { str = C; dex = C; int = Z; per = C; con = Z }, 2, 2)
 
 type sawnoff_shotgun (name, base_dmg, ?stats_dmg_scale) =
-    inherit firearm (name, TwoHand, -0.40, base_dmg, defaultArg stats_dmg_scale { str = Z; dex = Z; int = Z; per = C; con = C }, 1, 2)
+    inherit firearm (name, TwoHand, -0.40, base_dmg, defaultArg stats_dmg_scale { str = Z; dex = Z; int = Z; per = C; con = C }, 1, 1)
 
 type bolt_action_rifle (name, base_dmg, ?stats_dmg_scale) =
-    inherit firearm (name, TwoHand, 0.30, base_dmg, defaultArg stats_dmg_scale { str = C; dex = Z; int = Z; per = B; con = Z }, 1, 2)
+    inherit firearm (name, TwoHand, 0.30, base_dmg, defaultArg stats_dmg_scale { str = C; dex = Z; int = Z; per = B; con = Z }, 1, 1)
 
 type bow (name, base_dmg, ?stats_dmg_scale) =
     inherit ranged_weapon (name, TwoHand, -0.10, base_dmg, defaultArg stats_dmg_scale { str = C; dex = Z; int = Z; per = B; con = C })
