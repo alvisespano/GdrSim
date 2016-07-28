@@ -1,5 +1,5 @@
 ﻿
-module GdrSim.Sample
+module GdrSim.Store
 
 open Globals
 open Weapon
@@ -20,11 +20,11 @@ module Pc =
 
     open Stats
 
-    let unarmed1 = pc (avg_str_and_per, Build.empty)
+    let unarmed_fighter1 = pc (avg_str_and_per, Build.empty)
 
-    let cia_gun1 =
+    let cia_gunner1 =
         let r = pc (avg_str_and_per, Build.empty)
-        r.R.weapon <- cia_gun
+        r.R.weapon <- cia_pistol
         r
 
 

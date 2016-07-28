@@ -28,7 +28,7 @@ let Rng = new System.Random ()
 let rand_float (a, b) = (Rng.NextDouble () * (b - a)) + a
 let rand_int (a, b) = rand_float (float a, float b) |> Operators.round |> int
 
-[< RequireQualifiedAccessAttribute >]
+[< RequireQualifiedAccess >]
 type roll = Crit | Success | Fail
 
 let roll_d100 (x : float) =
@@ -39,5 +39,11 @@ let roll_d100 (x : float) =
 
 let pretty_percent x = sprintf "%d%%" (x * 100. |> Operators.round |> int)
 
-   
+// other stuff
+
+let retab n (s : string) = 
+    let s = s.Trim [|'\n'|]
+    let tab = new string (' ', n)
+    in
+        tab + s.Replace ("\n", "\n" + tab)
 

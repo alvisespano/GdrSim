@@ -6,9 +6,11 @@ open FSharp.Common
 open GdrSim.Character
 open Globals
 
+type action_performer = int<ca> -> int<ca> -> unit
+
 type active_out = {
     ca : int<ca>                    // number of CAs needed by the the ability 
-    performer : int<ca> -> unit     // performer function taking increasing CA#
+    performer : action_performer    // performer function taking increasing CA# and total expected CA number
 }
 
 type rule =
@@ -39,9 +41,9 @@ let passive_stepped (a : float, b : float) (step : float) setter =
         passive len (fun i n pc -> setter (a + step * float i) pc)
 
 /// Facility for defining active abilities that needs charging for several CAs, does nothing during charge and perform effect on the last CA
-let charged ca f =
-    { ca = ca
-      performer = fun i -> if i >= ca - 1<ca> then f () }
+let charged can f =
+    { ca = can
+      performer = fun cai can -> if cai >= can - 1<ca> then f () }
 
 
 // abilities

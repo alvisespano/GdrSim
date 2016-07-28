@@ -13,7 +13,8 @@ type build = Env.t<string, int>
 type [< AbstractClass >] npc (max_health_, position_, dodge_) =
     member val max_health : int<hp> = max_health_ with get, set
     member val health = max_health_ with get, set
-    member this.is_alive = this.health > 0<hp>
+    abstract is_dead : bool
+    default this.is_dead = this.health <= 0<hp>
     member val position : int<m> = position_ with get, set
     member val dodge : float = dodge_ with get, set
 
@@ -22,37 +23,48 @@ type weapon with
 
 
 type dummy (?max_health) =
-    inherit npc (defaultArg max_health 1000<hp>, 15<m>, 0.)
+    inherit npc (defaultArg max_health Config.Pc.dummy_max_health, Config.Pc.dummy_position, 0.)
 
 
-type arm (base_hit_) =
+type arm () =
     abstract base_hit : float with get, set
-    default val base_hit = base_hit_ with get, set
-    member val aimed_hit_malus = -0.40 with get, set
+    default val base_hit = Config.Pc.base_arm_hit with get, set
+    member val aimed_hit_malus = Config.Pc.base_aimed_hit_malus with get, set
     member this.hit = this.base_hit + this.weapon.hit_mod
     member this.aimed_hit = this.hit + this.aimed_hit_malus
     member val weapon : weapon = upcast unarmed () with get, set
     interface ICloneable with
         member this.Clone () = this.MemberwiseClone ()
 
-type larm (base_hit_) =
-    inherit arm (base_hit_)
-    member val hit_malus = -0.20 with get, set
+type larm () =
+    inherit arm ()
+    member val hit_malus = Config.Pc.base_larm_hit_malus with get, set
     override this.base_hit with get () = base.base_hit + this.hit_malus // setter is not overridden
+    member this.unequip_weapon = this.weapon <- unarmed ()
 
 
 type pc (stats_, build_) =
-    inherit npc (Config.max_health_by_con stats_.con, 0<m>, Config.dodge_by_dex stats_.dex)
+    inherit npc (Config.Pc.base_max_health stats_, Config.Pc.default_melee_position, Config.Pc.base_dodge stats_)
 
     member val stats : stats = stats_ with get, set
     member val build : build = build_ with get, set
     member val target : npc = upcast dummy () with get, set
-    member val ca_per_round = 3<ca> with get, set
+    member val ca_per_round = Config.Pc.base_ca_per_round with get, set
     member val dmg_mult = 1.0 with get, set
+    member val equip_weapon_time = 1<ca> with get, set
 
-    member val R = new arm (0.50) with get, set
-    member val L = new larm (0.50) with get, set
-            
+    override this.is_dead = this.health <= Config.Pc.death_threshold this.stats
+    member this.is_ko = this.health <= 0<hp> && not this.is_dead
+
+    member val R = new arm () with get, set
+    member val L = new larm () with get, set
+    
+    member this.can_dual_wield =
+        match this.R.weapon.hand with
+        | OneHand
+        | MainHand -> true
+        | TwoHand  -> false
+
     member this.base_hit with set x = this.R.base_hit <- x; this.L.base_hit <- x
     member this.aimed_hit_malus with set x = this.R.aimed_hit_malus <- x; this.L.aimed_hit_malus <- x
 
