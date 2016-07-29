@@ -15,11 +15,11 @@ type [< AbstractClass >] npc (max_health_, position_, dodge_) =
     member val health = max_health_ with get, set
     abstract is_dead : bool
     default this.is_dead = this.health <= 0<hp>
-    member val position : int<m> = position_ with get, set
+    member val position : position = position_ with get, set
     member val dodge : float = dodge_ with get, set
 
 type weapon with
-    member this.can_reach (t1 : npc) (t2 : npc) = let d = abs (t2.position - t1.position) in d <= this.max_range && d >= this.min_range
+    member this.can_reach (t1 : npc) (t2 : npc) = let d = t2.position - t1.position in d <= this.max_range && d >= this.min_range
 
 
 type dummy (?max_health) =
@@ -44,7 +44,7 @@ type larm () =
 
 
 type pc (stats_, build_) =
-    inherit npc (Config.Pc.base_max_health stats_, Config.Pc.default_melee_position, Config.Pc.base_dodge stats_)
+    inherit npc (Config.Pc.base_max_health stats_, Config.Pc.default_position, Config.Pc.base_dodge stats_)
 
     member val stats : stats = stats_ with get, set
     member val build : build = build_ with get, set

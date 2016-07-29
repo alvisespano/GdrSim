@@ -13,11 +13,10 @@ open Character
 let test_attacks (rounds : int) =
     let pc = Store.Pc.cia_gunner1
     L.msg Normal "%O" pc
-    let thp = pc.target.health
     let sim = new sim (pc)
     let met1 = new damage_meter (sim)
-    let sim = sim.perform_actions <| seq { for i = 1 to int pc.ca_per_round * rounds do yield Attack }
-    L.debug Normal "final state: %O" sim
+    sim.perform_actions <| seq { for i = 1 to int pc.ca_per_round * rounds do yield Attack }
+    L.debug Normal "%s final state: %O" (sim.GetType().Name) sim
     L.msg Normal "%s" met1.report
 
 

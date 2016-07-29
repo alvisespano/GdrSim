@@ -8,18 +8,18 @@ open Globals
 
 type action_performer = int<ca> -> int<ca> -> unit
 
-type active_out = {
+type [< NoEquality; NoComparison >] active_out = {
     ca : int<ca>                    // number of CAs needed by the the ability 
     performer : action_performer    // performer function taking increasing CA# and total expected CA number
 }
 
-type rule =
+type [< NoEquality; NoComparison >] rule =
     | Active of int * (int -> int -> pc -> active_out)
     | Passive of int * (int -> int -> pc -> unit)
 
 type req = (int * string) option
 
-type ability = {
+type [< NoEquality; NoComparison >] ability = {
     name : string
     req : req
     rule : rule

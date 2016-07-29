@@ -4,6 +4,11 @@ module GdrSim.Config
 open FSharp.Common
 open FSharp.Data.UnitSystems.SI.UnitSymbols
 
+// availabled compilation symbols
+//
+// SHOW_DATA_IN_METER_REPORT    include the 'data' field into the meter_report record
+
+
 let logger_cfg =
     let cfg = new Log.config ()
     cfg.show_datetime <- false
@@ -24,20 +29,21 @@ module Pc =
     let base_aimed_hit_malus = -0.40
     
     let dummy_max_health = 1000<hp>
-    let dummy_position = 20<m>
+    let dummy_position = StandingAt 20.<m>
 
-    let default_melee_position = 0<m>
-    let default_ranged_position = -100<m>
+    let default_position = StandingAt 0.<m>
+    let default_melee_distance = 0.5<m> // below ranged min range, so equipped weapon cannot shoot
+    let default_ranged_distance = 15.<m>
 
 module Weapon =
 
     module Ranged =
-        let default_min_range = 1<m>
-        let default_max_range = 50<m>
+        let default_min_range = 0.7<m>
+        let default_max_range = 50.<m>
 
     module Melee =
-        let default_min_range = 0<m>
-        let default_max_range = 2<m>
+        let default_min_range = 0.<m>
+        let default_max_range = 2.5<m>
 
 
 module Report =

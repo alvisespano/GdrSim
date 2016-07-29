@@ -57,8 +57,8 @@ type [< AbstractClass >] weapon (name_, hand_, min_range_, max_range_, hit_mod_,
     member val hand = hand_
     member val base_dmg = base_dmg_
     member val stats_dmg_scale = stats_dmg_scale_
-    member val min_range : int<m> = min_range_
-    member val max_range : int<m> = max_range_
+    member val min_range : float<m> = min_range_
+    member val max_range : float<m> = max_range_
     member this.typee = this.GetType().Name
     member val name = name_
     member this.dmg (stats : stats) = this.base_dmg + this.scaled_dmg stats
@@ -74,7 +74,7 @@ type [< AbstractClass >] weapon (name_, hand_, min_range_, max_range_, hit_mod_,
             |> Operators.round |> int |> LanguagePrimitives.Int32WithMeasure<hp>
 
     override this.ToString () =
-        sprintf "\"%s\" %O %s hit:%+g%% range:%dm-%dm base:%d + {%s}" this.name this.hand this.typee this.hit_mod this.min_range this.max_range this.base_dmg (pretty_stats_dmg_scale this.stats_dmg_scale) 
+        sprintf "\"%s\" %O %s hit:%+g%% range:%gm-%gm base:%d + {%s}" this.name this.hand this.typee this.hit_mod this.min_range this.max_range this.base_dmg (pretty_stats_dmg_scale this.stats_dmg_scale) 
 
     abstract pretty_with_dmg : stats -> string
     default this.pretty_with_dmg (stats : stats) =

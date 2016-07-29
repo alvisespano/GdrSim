@@ -20,7 +20,7 @@ let apply_build (pc : pc) (build : build) =
         | Passive (n, on_use) -> on_use i n pc
 
 
-type action =
+type [< NoComparison >] action =
     | Attack
     | UseAbility of string
     | GoMelee
@@ -48,26 +48,25 @@ with
         | Attack ->    
             let target = pc.target
             let arm_attack (a : arm) =
-                if a.weapon.can_reach pc target then 
-                    match roll_d100 a.hit with
-                    | roll.Crit    // TODO: implementare il crit
-                    | roll.Success  ->
-                        let dmg = a.weapon.dmg pc.stats
-                        let reload =
-                            match a.weapon with
-                            | :? firearm as w ->
-                                match roll_d100 w.reload with
-                                | roll.Crit | roll.Success -> 1<ca>
-                                | roll.Fail -> 0<ca>
-                            | _ -> 0<ca>
-                        in
-                            dmg, reload
-                    | roll.Fail -> 0<hp>, 0<ca>
-                else 0<hp>, 0<ca>
+                let dmg =
+                    if a.weapon.can_reach pc target then
+                        match roll_d100 a.hit with
+                        | roll.Crit    // TODO: implementare il crit
+                        | roll.Success -> a.weapon.dmg pc.stats
+                        | roll.Fail    -> 0<hp>
+                    else 0<hp>
+                let reload =
+                    match a.weapon with
+                    | :? firearm as w ->
+                        match roll_d100 w.reload with
+                        | roll.Crit | roll.Success -> 1<ca>
+                        | roll.Fail -> 0<ca>
+                    | _ -> 0<ca>
+                in
+                    dmg, reload
             let rdmg, rreload = arm_attack pc.R
             let ldmg, lreload = if pc.can_dual_wield then arm_attack pc.L else 0<hp>, 0<ca>
             let dmg = rdmg + ldmg
-            let reload = rreload + lreload
             in
                 1<ca> + rreload + lreload,
                 (fun cai can ->
@@ -75,25 +74,34 @@ with
                     // first CA: shoot
                     | 0<ca> ->
                         target.health <- target.health - dmg
-                        if pc.can_dual_wield then msg cai can "[target hp = %d][L-dmg = %d][R-dmg = %d][dmg = %d]" target.health ldmg rdmg dmg
+                        if ldmg > 0<hp> then msg cai can "[target hp = %d][L-dmg = %d][R-dmg = %d][dmg = %d]" target.health ldmg rdmg dmg
                         else msg cai can "[target hp = %d][dmg = %d]" target.health dmg
-                    // second CA: reload
-                    | _ -> 
-                        msg cai can "[R-reload = %d][L-reload = %d][reload = %d]" rreload lreload reload
+                    // second and possibly third CA: reloading
+                    | _ ->
+                        msg cai can "[reload = %s]"
+                            (match rreload > 0<ca>, lreload > 0<ca> with
+                             | true, true -> "R + L"
+                             | true, false -> "R"
+                             | false, true -> "L"
+                             | false, false -> unexpected_case "attack action performer has been invoked with extra CA# for reloading but no reloading time was computed" __SOURCE_FILE__ __LINE__)
                 )
 
         | EquipR w ->
-            pc.equip_weapon_time, (fun cai can ->
-                    pc.R.weapon <- w
-                    if not pc.can_dual_wield then pc.L.unequip_weapon
-                    msg cai can "[R-weapon = %O][L-weapon = %O]" pc.R.weapon pc.L.weapon)
+            pc.equip_weapon_time,
+            (fun cai can ->
+                pc.R.weapon <- w
+                if not pc.can_dual_wield then pc.L.unequip_weapon
+                msg cai can "[R-weapon = %O][L-weapon = %O]" pc.R.weapon pc.L.weapon
+            )
 
         | EquipL w ->
-            pc.equip_weapon_time, (fun cai can ->
-                    if pc.can_dual_wield && w.hand = OneHand then
-                        pc.L.weapon <- w
-                        msg cai can "[R-weapon = %O][L-weapon = %O]" pc.R.weapon pc.L.weapon
-                    else warn cai can "cannot equip [%O] in left weapon" w)
+            pc.equip_weapon_time,
+            (fun cai can ->
+                if pc.can_dual_wield && w.hand = OneHand then
+                    pc.L.weapon <- w
+                    msg cai can "[R-weapon = %O][L-weapon = %O]" pc.R.weapon pc.L.weapon
+                else warn cai can "cannot equip [%O] in left weapon" w
+            )
 
         | UseAbility name ->            
             let abi = find_ability name            
@@ -102,19 +110,25 @@ with
             | Active (n, on_use) ->
                 let i = pc.build.lookup name
                 let out = on_use i n pc
-                out.ca, (fun cai can ->
+                out.ca,
+                (fun cai can ->
                     msg cai can "[out = %O]" out
-                    out.performer cai can)
+                    out.performer cai can
+                )
 
         | GoMelee ->
-            1<ca>, (fun cai can ->
+            1<ca>,
+            (fun cai can ->
                 pc.position <- pc.target.position
-                msg cai can "ok")
+                msg cai can "at %O" pc.position
+            )
 
         | GoRanged ->
-            1<ca>, (fun cai can ->
-                pc.position <- pc.target.position + Config.Pc.default_ranged_position
-                msg cai can "ok")
+            1<ca>,
+            (fun cai can ->
+                pc.position <- pc.target.position + Config.Pc.default_ranged_distance
+                msg cai can "at %O" pc.position
+            )
 
 
 
@@ -152,10 +166,10 @@ type sim (pc_ : pc) as this =
 
     member this.perform_action (a : action) =
         let dca, performer = a.performer this.pc
-        if current_ca = 0<ca> then this.call_start_of_new_round   // start-of-new-round callback must be invoked before any CA-related callback
         if dca > 0<ca> then
             // perform action taking 1 or more CAs to execute
             for i = 0 to int dca - 1 do
+                if current_ca = 0<ca> then this.call_start_of_new_round   // must be invoked before CA-related callbacks AND must be called INSIDE this for loop
                 this.call_before_ca
                 performer (LanguagePrimitives.Int32WithMeasure<ca> i) dca
                 this.call_after_ca
@@ -179,7 +193,9 @@ type sim (pc_ : pc) as this =
 
 
 type meter_report = {
+    #if SHOW_DATA_IN_METER_REPORT
     data : float[]
+    #endif
     count : int
     total : float
     average : float
@@ -187,13 +203,15 @@ type meter_report = {
     max : float
     median : float
     variance : float
-    std_deviation : float   // sinonimo di scarto quadratico medio
+    std_deviation : float
     coefficient_of_variation : float
 }
 with
     override this.ToString () =
-        sprintf "data = %s\ncount = %d\ntotal = %g\navg = %g\nmin = %g\nmax = %g\nmedian = %g\nvariance = %g\nstd deviation = %g\ncoefficient of variance = %s"
-            (mappen_stringables (sprintf "%g") " " this.data)
+        #if SHOW_DATA_IN_METER_REPORT
+        sprintf "data = %s\n" (mappen_stringables (sprintf "%g") " " this.data) +
+        #endif
+        sprintf "count = %d\ntotal = %g\navg = %g\nmin = %g\nmax = %g\nmedian = %g\nvariance = %g\nstd deviation = %g\ncoefficient of variance = %s"
             this.count this.total this.average this.min this.max this.median
             this.variance this.std_deviation (pretty_percent this.coefficient_of_variation)
 
@@ -204,7 +222,10 @@ with
         let σ2 = Array.fold (fun z x -> z + (x - μ) ** 2.) 0. a / float len
         let σ = sqrt σ2
         in
-            { data = a
+            {
+              #if SHOW_DATA_IN_METER_REPORT
+              data = a
+              #endif
               count = len
               average = μ
               total = Array.sum a
